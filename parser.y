@@ -14,7 +14,7 @@
 
 %{
 extern void exit_callback();
-extern void test_callback(char*, char* args[], int n);
+extern void command_callback(char*, char* args[], int n);
 extern void cd_callback();
 extern void cd_dash_callback();
 extern void cd_dir_callback(const char*);
@@ -36,7 +36,7 @@ expr:
 
 stmt: cdcc
     | EXIT          { exit_callback(); }
-    | STRING args   { test_callback($1, $2.arr, $2.n); }
+    | STRING args   { command_callback($1, $2.arr, $2.n); }
     ;
 
 args:               { $$.n = 0; }

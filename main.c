@@ -6,16 +6,15 @@
 #include <getopt.h>
 #include <err.h>
 #include <signal.h>
-
 #include <readline/readline.h>
 
 #include "parser.tab.h"
 #include "lexer.h"
 
+#include "change_dir.h"
+
 static int return_value = 0;
 static int child_pid = 0;
-static char curdir[128] = {0};
-static char olddir[128] = {0};
 
 void yyerror(const char* err)
 {
@@ -28,57 +27,7 @@ void exit_callback()
     exit(return_value); 
 }
 
-void update_dir()
-{
-    strcpy(olddir, curdir);
-    getcwd(curdir, 128);
-}
-
-void cd_callback()
-{
-    chdir(getenv("HOME"));
-    update_dir();
-}
-
-void cd_dash_callback()
-{
-    puts(olddir);
-    chdir(olddir);
-    update_dir();
-}
-
-void cd_dir_callback(const char* dir)
-{
-    chdir(dir);
-    update_dir();
-}
-
-int command_mode(const char* command)
-{
-    yy_scan_string(command);
-    yyparse();
-    yylex_destroy();
-
-    return return_value;
-}
-
-int shell_file_mode(const char* filename)
-{
-    FILE* fp = fopen(filename, "r");
-    if (fp == NULL)
-        err(1, filename);
-
-    yyin = fp;
-
-    yyparse();
-    yylex_destroy();
-
-    fclose(fp);
-
-    return return_value;
-}
-
-void test_callback(char* cmd, char* args[], int n)
+void command_callback(char* cmd, char* args[], int n)
 {
     //puts(cmd);
     //for (int i=0; i<n; ++i)
@@ -86,10 +35,7 @@ void test_callback(char* cmd, char* args[], int n)
 
     int pid = fork();
     if (pid == -1)
-    {
-        puts("fork() error");
-        return;
-    }
+        err(1, NULL);
 
     char** exec_args = (char**)malloc((n+2) * sizeof(char*));
     
@@ -108,15 +54,9 @@ void test_callback(char* cmd, char* args[], int n)
         child_pid = 0;
 
         if (WIFEXITED(status))
-        {
             return_value = WEXITSTATUS(status);
-            //printf("EXITED: %d %d\n", return_value, WEXITSTATUS(status));
-        }
         else if (WIFSIGNALED(status))
-        {
             return_value = 128 + WTERMSIG(status);
-            //printf("SIGNALED: %d %d\n", return_value, WTERMSIG(status));
-        }
         else
             return_value = status;
     }
@@ -137,7 +77,31 @@ void test_callback(char* cmd, char* args[], int n)
     for (int i=0; i<n+1; ++i)
         free(exec_args[i]);
     free(exec_args);
+}
 
+int command_mode(const char* command)
+{
+    yy_scan_string(command);
+    yyparse();
+    yylex_destroy();
+
+    return return_value;
+}
+
+int shell_file_mode(const char* filename)
+{
+    FILE* fp = fopen(filename, "r");
+    if (fp == NULL)
+        err(1, "%s", filename);
+
+    yyin = fp;
+
+    yyparse();
+    yylex_destroy();
+
+    fclose(fp);
+
+    return return_value;
 }
 
 void handle_SIGINT(int signo)
@@ -145,8 +109,7 @@ void handle_SIGINT(int signo)
     if (child_pid > 0)
     {
         kill(child_pid, signo);
-        // TODO: print to stderr
-        printf("Killed by signal %d.\n", signo);
+        fprintf(stderr, "Killed by signal %d.\n", signo);
     }
     else
     {
@@ -183,12 +146,9 @@ int interactive_mode()
     return return_value;
 }
 
-extern char **environ;
-
 int main(int argc, char** argv)
 {
-    getcwd(curdir, 128);
-    getcwd(olddir, 128);
+    cd_init();
 
     int opt;
     while ((opt = getopt(argc, argv, "c:")) != -1)
@@ -205,9 +165,8 @@ int main(int argc, char** argv)
     if (argc > 2)
         errx(1, "Usage: %s [-c commands] [shell file]", argv[0]);
 
-    if (argc >= 2)  // we have a shell file
+    if (argc == 2)  // we have a shell file
         return shell_file_mode(argv[1]);
 
-    // Interactive mode
     return interactive_mode();
 }

@@ -1,5 +1,5 @@
 shell: main.c parser.tab.c lex.yy.c
-	gcc -g -Wall -Wextra -lreadline -o shell main.c parser.tab.c lex.yy.c
+	gcc -g -Wall -Wextra -o shell main.c parser.tab.c lex.yy.c -lreadline 
 
 lex.yy.c: lexer.l parser.tab.h
 	flex --header-file=lexer.h lexer.l
