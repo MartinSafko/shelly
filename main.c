@@ -18,7 +18,10 @@ static int child_pid = 0;
 
 void yyerror(const char* err)
 {
-    errx(2, "%s near unexpected token %s", err, yytext);
+    //yylex_destroy();
+    //errx(2, "%s near unexpected token %s", err, yytext);
+    fprintf(stderr, "line %d: %s\n", yylineno, err);
+    return_value = 2;
 }
 
 void exit_callback()

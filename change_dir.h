@@ -33,5 +33,6 @@ void cd_dash_callback()
 void cd_dir_callback(const char* dir)
 {
     chdir(dir);
+    // TODO: error handling
     cd_update_dir();
 }
