@@ -1,22 +1,13 @@
 %{
-#include <sys/queue.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <string.h>
+#include "command.h"
 
-struct stmt
-{
-    STAILQ_ENTRY(stmt) entries;
-    int q;
-};
-
-STAILQ_HEAD(test, stmt);
+extern void command_callback(char*, char* args[], int n);
 
 extern void exit_callback();
-extern void command_callback(char*, char* args[], int n);
-extern void cd_callback();
-extern void cd_dash_callback();
-extern void cd_dir_callback(const char*);
+
+extern void cd_home();
+extern void cd_dash();
+extern void cd_dir(const char*);
 
 extern int yylex();
 extern void yyerror(const char*);
@@ -24,21 +15,19 @@ extern void yyerror(const char*);
 
 %union {
     char* str;
-    struct {
-        int n;
-        char* arr[128];
-    } args;
-    struct test* tailq;
+    struct args_t* args;
+    struct stmt_t* stmt;
+    struct list_t* stmt_list;
 };
 
 %token SEMICOLON NL DASH PIPE
 %token EXIT CD
 %token<str> STRING
 
-%type<args> args
 %type<str> mstr;
-%type<tailq> pstm;
-%type<str> stmt;
+%type<args> args
+%type<stmt> stmt;
+%type<stmt_list> pstm;
 
 %%
 
@@ -51,25 +40,26 @@ expr:
     | rstm SEMICOLON expr
     ;
 
-rstm: pstm          { /*run_command_calback();*/ struct stmt* p; STAILQ_FOREACH(p, $1, entries) { printf("%d", p->q);}}
+rstm: pstm          { run_command($1); destroy_stmt_list($1); }
     ;
 
-pstm: stmt              { puts($1); $$ = malloc(sizeof(struct test)); STAILQ_INIT($$); }
-    | stmt PIPE pstm    { puts($1); struct stmt* x = (struct stmt*)malloc(sizeof(struct stmt)); x->q = 1; STAILQ_INSERT_HEAD($3, x, entries); $$ = $3; }
+pstm: stmt              { $$ = create_stmt_list(); add_stmt($$, $1); }
+    | stmt PIPE pstm    { add_stmt($3, $1); $$ = $3; }
     ;
 
-stmt: cdcc          { $$ = "cd"; }
-    | EXIT          { $$ = "exit"; exit_callback(); }
-    | STRING args   { $$ = malloc(sizeof(128)); strcpy($$, $1); command_callback($1, $2.arr, $2.n); }
+stmt: cdcc          { $$ = create_internal_stmt("cd"); }
+    | EXIT          { $$ = create_internal_stmt("exit"); }
+    | STRING        { $$ = create_stmt($1); }
+    | STRING args   { $$ = create_stmt_args($1, $2); /*command_callback($1, $2.arr, $2.n);*/ }
     ;
 
-args:               { $$.n = 0; }
-    | args STRING   { int i = $$.n++; $$.arr[i] = $2; }
+args: STRING        { $$ = create_args(); add_arg($$, $1); }
+    | args STRING   { add_arg($1, $2); $$ = $1; }
     ;
 
-cdcc: CD            { cd_callback(); }
-    | CD DASH       { cd_dash_callback(); }
-    | CD STRING     { cd_dir_callback($2); free($2); }
+cdcc: CD            { cd_home(); }
+    | CD DASH       { cd_dash(); }
+    | CD STRING     { cd_dir($2); free($2); }
     | CD mstr       { /*free($2); free($3);*/ yyerror("cd: too many arguments"); }
     ;
 

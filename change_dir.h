@@ -1,3 +1,5 @@
+#pragma once
+
 #include <unistd.h>
 
 #define PATHLEN 128
@@ -17,20 +19,20 @@ void cd_update_dir()
     getcwd(curdir, PATHLEN);
 }
 
-void cd_callback()
+void cd_home()
 {
     chdir(getenv("HOME"));
     cd_update_dir();
 }
 
-void cd_dash_callback()
+void cd_dash()
 {
     puts(olddir);
     chdir(olddir);
     cd_update_dir();
 }
 
-void cd_dir_callback(const char* dir)
+void cd_dir(const char* dir)
 {
     chdir(dir);
     // TODO: error handling
