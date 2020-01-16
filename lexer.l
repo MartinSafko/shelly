@@ -8,12 +8,15 @@
 %}
 
 %%
-[ \t]
+[ \t]           // ignore whitespace
+"#"(.)*         // ignore comments
 \n              { return NL; }
 "-"             { return DASH; }
-";"               { return SEMICOLON; }
+";"             { return SEMICOLON; }
 "|"             { return PIPE; }
-"#"(.)*
-"exit"            { return EXIT; }
-"cd"              { return CD; }
-[^ ;#\t\n\|]+    { yylval.str = strdup(yytext); return STRING; }
+"<"             { return IN; }
+">"             { return OUT; }
+">>"            { return APP; }
+"cd"            { return CD; }
+"exit"          { return EXIT; }
+[^ ;#\t\n\|><]+   { yylval.str = strdup(yytext); return STRING; }
