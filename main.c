@@ -1,8 +1,4 @@
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <stdlib.h>
 #include <getopt.h>
 #include <err.h>
 #include <signal.h>
@@ -12,14 +8,10 @@
 #include "lexer.h"
 
 #include "change_dir.h"
-
-static int return_value = 0;
-static int child_pid = 0;
+#include "execute.h"
 
 void yyerror(const char* err)
 {
-    //yylex_destroy();
-    //errx(2, "%s near unexpected token %s", err, yytext);
     fprintf(stderr, "line %d: %s\n", yylineno, err);
     return_value = 2;
 }
@@ -28,58 +20,6 @@ void exit_callback()
 {
     yylex_destroy();
     exit(return_value); 
-}
-
-void command_callback(char* cmd, char* args[], int n)
-{
-    //puts(cmd);
-    //for (int i=0; i<n; ++i)
-    //    puts(args[i]);
-
-    int pid = fork();
-    if (pid == -1)
-        err(1, NULL);
-
-    char** exec_args = (char**)malloc((n+2) * sizeof(char*));
-    
-    exec_args[0] = cmd;
-    for (int i=0; i<n; ++i)
-        exec_args[i+1] = args[i];
-    exec_args[n+1] = (char*)NULL;
-    
-    if (pid > 0)
-    {
-        child_pid = pid;
-        
-        int status;
-        waitpid(pid, &status, 0);
-        
-        child_pid = 0;
-
-        if (WIFEXITED(status))
-            return_value = WEXITSTATUS(status);
-        else if (WIFSIGNALED(status))
-            return_value = 128 + WTERMSIG(status);
-        else
-            return_value = status;
-    }
-    else
-    {
-        int ret = execvp(cmd, exec_args);
-        
-        // TODO: better way to handle this
-        for (int i=0; i<n+1; ++i)
-            free(exec_args[i]);
-        free(exec_args);
-        yylex_destroy();
-
-        if (ret == -1)
-            err(127, NULL);
-    }
-
-    for (int i=0; i<n+1; ++i)
-        free(exec_args[i]);
-    free(exec_args);
 }
 
 int command_mode(const char* command)

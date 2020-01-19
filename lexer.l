@@ -19,4 +19,4 @@
 ">>"            { return APP; }
 "cd"            { return CD; }
 "exit"          { return EXIT; }
-[^ ;#\t\n\|><]+   { yylval.str = strdup(yytext); return STRING; }
+[^ ;#\t\n\|><]+ { yylval.str = strdup(yytext); return STRING; }

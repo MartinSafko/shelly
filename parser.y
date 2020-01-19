@@ -1,14 +1,9 @@
 %{
 #include "command.h"
-
-extern void command_callback(char*, char* args[], int n);
+#include "execute.h"
+#include "change_dir.h"
 
 extern void exit_callback();
-
-extern void cd_home();
-extern void cd_dash();
-extern void cd_dir(const char*);
-
 extern int yylex();
 extern void yyerror(const char*);
 %}
@@ -68,7 +63,7 @@ args: STRING        { $$ = create_args(); add_arg($$, $1); }
     | args STRING   { add_arg($1, $2); $$ = $1; }
     ;
 
-reds: redr         { $$ = $1; }
+reds: redr          { $$ = $1; }
     | reds redr     { combine_redr($1, $2);  $$ = $1; }
     ;
 
@@ -79,9 +74,9 @@ redr: IN STRING     { $$ = create_redr(0, $2); }
 cdcc: CD            { cd_home(); }
     | CD DASH       { cd_dash(); }
     | CD STRING     { cd_dir($2); free($2); }
-    | CD mstr       { /*free($2); free($3);*/ yyerror("cd: too many arguments"); }
+    | CD mstr       { yyerror("cd: too many arguments"); }
     ;
 
-mstr: STRING STRING
-    | mstr STRING
+mstr: STRING STRING { free($1); free($2); }
+    | mstr STRING   { free($2); }
     ;

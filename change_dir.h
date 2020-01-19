@@ -1,40 +1,62 @@
 #pragma once
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
+#include <string.h>
+#include <err.h>
 
-#define PATHLEN 128
+#define PATHLEN 256
 
 static char curdir[PATHLEN] = {0};
 static char olddir[PATHLEN] = {0};
 
-void cd_init()
+static void safe_chdir(const char* dir)
 {
-    getcwd(curdir, PATHLEN);
-    getcwd(olddir, PATHLEN);
+    int ret = chdir(dir);
+    if (ret == -1)
+        err(1, "Could not change directory to %s", dir);
 }
 
-void cd_update_dir()
+static void safe_getcwd(char* path)
+{
+    char* ret = getcwd(path, PATHLEN);
+    if (ret == NULL)
+        err(1, "Current working dir is larger then the buffer size");
+}
+
+static inline void cd_init()
+{
+    safe_getcwd(curdir);
+    safe_getcwd(olddir);
+}
+
+static inline void cd_update_dir()
 {
     strcpy(olddir, curdir);
-    getcwd(curdir, PATHLEN);
+    safe_getcwd(curdir);
 }
 
-void cd_home()
+static inline void cd_home()
 {
-    chdir(getenv("HOME"));
+    char* home_dir = getenv("HOME");
+    if (home_dir == NULL)
+        errx(1, "Could not find HOME directory");
+
+    safe_chdir(home_dir);
     cd_update_dir();
 }
 
-void cd_dash()
+static inline void cd_dash()
 {
     puts(olddir);
-    chdir(olddir);
+    safe_chdir(olddir);
     cd_update_dir();
 }
 
-void cd_dir(const char* dir)
+static inline void cd_dir(const char* dir)
 {
-    chdir(dir);
-    // TODO: error handling
+    safe_chdir(dir);
     cd_update_dir();
 }
+

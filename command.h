@@ -41,7 +41,6 @@ void add_arg(struct args_t*, char*);
 void add_stmt(stmt_list_t* list, struct stmt_t* stmt);
 
 void combine_redr(struct redr_t*, struct redr_t*);
-void run_command(stmt_list_t*);
 
 void destroy_args(struct args_t*);
 void destroy_redr(struct redr_t*);
