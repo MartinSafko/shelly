@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <err.h>
 #include <sys/types.h>
@@ -116,7 +117,10 @@ void run_command(stmt_list_t* list)
         if (WIFEXITED(status))
             return_value = WEXITSTATUS(status);
         else if (WIFSIGNALED(status))
+        {
             return_value = 128 + WTERMSIG(status);
+            fprintf(stderr, "Killed by signal %d.\n", WTERMSIG(status));
+        }
         else
             return_value = status;
     }

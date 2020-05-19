@@ -47,16 +47,15 @@ int shell_file_mode(const char* filename)
     return return_value;
 }
 
-void handle_SIGINT(int signo)
+void handle_sigint(int signo)
 {
     if (child_pid > 0)
     {
         kill(child_pid, signo);
-        fprintf(stderr, "Killed by signal %d.\n", signo);
     }
     else
     {
-        puts("");
+        rl_crlf();
         rl_on_new_line();
         rl_replace_line("", 0);
         rl_redisplay();
@@ -66,7 +65,7 @@ void handle_SIGINT(int signo)
 void setup_handler()
 {
     struct sigaction act;
-    act.sa_handler = handle_SIGINT;
+    act.sa_handler = handle_sigint;
     sigemptyset(&act.sa_mask);
     act.sa_flags = SA_RESTART;
     sigaction(SIGINT, &act, NULL);
