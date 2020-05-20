@@ -182,9 +182,13 @@ void run_command(stmt_list_t* list)
         {
             close_extra_fds(&in_out_fd[0], &in_out_fd[1]);
 			in_out_fd[0] = fd[0];
+            
+            child_pid = pid;
 
             int status;
             waitpid(pid, &status, 0);
+            
+            child_pid = 0;
             
             if (WIFEXITED(status))
                 return_value = WEXITSTATUS(status);
@@ -195,7 +199,6 @@ void run_command(stmt_list_t* list)
             }
             else
                 return_value = status;
-
 		}
     }
 }
