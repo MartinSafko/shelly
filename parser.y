@@ -46,8 +46,8 @@ pstm: stmt              { $$ = create_stmt_list(); add_stmt($$, $1); }
 
 stmt: cdcc          { $$ = create_internal_stmt("cd"); }
     | EXIT          { $$ = create_internal_stmt("exit"); exit_callback(); }
-    | STRING        { $$ = create_stmt($1, 0); }
-    | STRING args   { $$ = create_stmt_args($1, $2, 0); }
+    | STRING        { $$ = create_stmt($1, NULL); }
+    | STRING args   { $$ = create_stmt_args($1, $2, NULL); }
 
 // Redirection hell
     | STRING reds                   { $$ = create_stmt($1, $2); }

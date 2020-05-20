@@ -116,24 +116,12 @@ void destroy_redr(struct redr_t* redr)
     free(redr);
 }
 
-void print_redr(struct redr_t* redr)
-{
-    if (redr->input != NULL)
-        printf("%s ", redr->input);
-    if (redr->output != NULL)
-        printf("%s ", redr->output);
-    if (redr->append != NULL)
-        printf("%s ", redr->append);
-    puts("");
-}
-
-
 void destroy_stmt(struct stmt_t* stmt)
 {
     if (!stmt->internal)
     {
         destroy_args(stmt->args);
-        if (stmt->redr != NULL)     // temporary !!!
+        if (stmt->redr != NULL)
             destroy_redr(stmt->redr);
         free(stmt->name);
     }
