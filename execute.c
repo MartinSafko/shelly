@@ -35,7 +35,13 @@ void setup_redirect_fds(struct stmt_t* stmt, int* input, int* output)
     }
 }
 
-void run_command(stmt_list_t* list)
+void close_extra_fds(int* inputs, int* output)
+{
+    if (*inputs != 0) close(*inputs);
+    if (*output != 1) close(*output);
+}
+
+void run_command_with_premade_pipes(stmt_list_t* list)
 {
     int count = 0;
 
@@ -82,11 +88,7 @@ void run_command(stmt_list_t* list)
             dup2(in_out_fds[index], 0);   
             dup2(in_out_fds[index+1], 1);
 
-            if (in_out_fds[index] != 0)
-                close(in_out_fds[index]);
-
-            if (in_out_fds[index+1] != 1)
-                close(in_out_fds[index+1]);
+            close_extra_fds(&in_out_fds[index], &in_out_fds[index + 1]);
 
             stmt->args->arr[stmt->args->n] = NULL;
 
@@ -95,10 +97,7 @@ void run_command(stmt_list_t* list)
                 err(127, NULL);
         }
 
-        if (in_out_fds[index] != 0)
-            close(in_out_fds[index]);
-        if (in_out_fds[index+1] != 1)
-            close(in_out_fds[index+1]);
+        close_extra_fds(&in_out_fds[index], &in_out_fds[index + 1]);
             
         stmt->pid = pid;
 
@@ -126,4 +125,77 @@ void run_command(stmt_list_t* list)
     }
 
     free(in_out_fds);
+}
+
+void run_command(stmt_list_t* list)
+{
+    int count = 0;
+
+    struct stmt_t* stmt;
+    STAILQ_FOREACH(stmt, list, entries)
+        if (!stmt->internal)
+            ++count;
+
+    if (count == 0)
+        return;
+
+    int fd[2];
+    int in_out_fd[2] = {0, 1};
+
+    STAILQ_FOREACH(stmt, list, entries)
+    {
+        if (stmt->internal)
+            continue;
+        
+        --count;
+
+        if (count > 0)
+        {
+		    int pret = pipe(fd);
+            if (pret == -1)
+                err(1, "Pipe creation failed");
+
+            in_out_fd[1] = fd[1];
+        }
+
+        int pid = fork();
+        if (pid == -1)
+            err(1, "Fork failed");
+
+        if (pid == 0)
+        {
+            setup_redirect_fds(stmt, &in_out_fd[0], &in_out_fd[1]);
+			
+            dup2(in_out_fd[0], 0);
+			dup2(in_out_fd[1], 1);
+
+            close_extra_fds(&in_out_fd[0], &in_out_fd[1]);
+
+            stmt->args->arr[stmt->args->n] = NULL;
+
+            int ret = execvp(stmt->name, stmt->args->arr);
+            if (ret == -1)
+                err(127, NULL);
+			exit(1);
+		}
+		else
+        {
+            close_extra_fds(&in_out_fd[0], &in_out_fd[1]);
+			in_out_fd[0] = fd[0];
+
+            int status;
+            waitpid(pid, &status, 0);
+            
+            if (WIFEXITED(status))
+                return_value = WEXITSTATUS(status);
+            else if (WIFSIGNALED(status))
+            {
+                return_value = 128 + WTERMSIG(status);
+                fprintf(stderr, "Killed by signal %d.\n", WTERMSIG(status));
+            }
+            else
+                return_value = status;
+
+		}
+    }
 }
