@@ -15,7 +15,7 @@ static void safe_chdir(const char* dir)
 {
     int ret = chdir(dir);
     if (ret == -1)
-        err(1, "Could not change directory to %s", dir);
+        warn("Could not change directory to %s", dir);
 }
 
 static void safe_getcwd(char* path)
@@ -41,7 +41,7 @@ static inline void cd_home()
 {
     char* home_dir = getenv("HOME");
     if (home_dir == NULL)
-        errx(1, "Could not find HOME directory");
+        warnx("Could not find HOME directory");
 
     safe_chdir(home_dir);
     cd_update_dir();
